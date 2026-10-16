@@ -238,6 +238,17 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn(b" 400 ", response)
         self.assertEqual(self.left.peer.balances["bob"], 100)
 
+    def test_stalled_post_body_times_out_without_creating_event(self):
+        port = self.servers[0].server_port
+        request = (f"POST /actions HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n"
+                   "Content-Type: application/json\r\nContent-Length: 100\r\n"
+                   "Connection: close\r\n\r\n{}").encode("ascii")
+        with socket.create_connection(("127.0.0.1", port), timeout=5) as connection:
+            connection.sendall(request)
+            response = connection.recv(4096)
+        self.assertIn(b" 408 ", response)
+        self.assertEqual(self.left.peer.events, {})
+
     def test_peer_response_is_bounded_before_json_parse(self):
         oversized = BytesIO(b" " * (MAX_PEER_RESPONSE_BYTES + 1))
         with patch("node_server.urlopen", return_value=oversized):

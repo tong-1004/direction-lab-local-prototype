@@ -648,6 +648,10 @@ def start_auto_sync(node: Node, interval: float) -> tuple[StopEvent, Thread]:
 
 def make_server(node: Node, port: int) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
+        def setup(self):
+            super().setup()
+            self.connection.settimeout(3)
+
         def log_message(self, format, *args):
             pass
 
@@ -815,6 +819,8 @@ def make_server(node: Node, port: int) -> ThreadingHTTPServer:
                     result = node.action(request["author"], request["kind"], request["payload"])
                 else:
                     result = node.accept(decode_event(request))
+            except TimeoutError:
+                return self.respond(408, {"error": "request_timeout"})
             except (ValueError, TypeError, KeyError, OverflowError):
                 return self.respond(400, {"error": "invalid_event"})
             except OSError:
