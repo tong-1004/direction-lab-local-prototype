@@ -3,6 +3,7 @@ const people = ["alice", "bob", "chen"];
 const notice = message => { $("notice").textContent = message; };
 const identityLabel = id => /^[0-9a-f]{64}$/.test(id) ? `${id.slice(0, 12)}…${id.slice(-8)}` : id;
 let nodeOnline = false;
+let nodeConfigValid = false;
 let syncPending = false;
 let comparePending = false;
 let comparedNodeVersion = null;
@@ -32,6 +33,7 @@ function forgetPendingAttempt() {
 
 function pauseNodeActions(reason = "節點無法連線") {
   nodeOnline = false;
+  nodeConfigValid = false;
   lookupSequence++;
   $("lookup-result").textContent = "節點狀態已失效；先前的單筆事件核對不可沿用，請重新連線後查詢。";
   $("compare-details").hidden = true;
@@ -253,7 +255,7 @@ async function refresh() {
         : autoResult.state === "ok" ? `上次檢查無未解決項${checkedLabel}`
           : `上次檢查有問題${checkedLabel}，請手動同步查看`;
   $("auto-sync").className = autoResult && !["ok", "no_peers"].includes(autoResult.state) ? "danger" : "";
-  $("sync").disabled = syncPending || syncRunning || peerCount === 0;
+  $("sync").disabled = syncPending || syncRunning || peerCount === 0 || Boolean(configError);
   $("compare-peers").disabled = comparePending || peerCount === 0;
   $("export-events").disabled = exportPending;
   for (const control of $("lookup-form").elements) control.disabled = false;
@@ -428,6 +430,7 @@ async function refresh() {
     renderedConflictsKey = conflictsKey;
   }
   nodeOnline = true;
+  nodeConfigValid = !configError;
   lastSuccessfulRefreshMs = Date.now();
   lastRefreshAt = new Date().toLocaleTimeString("zh-TW", {hour12: false});
   $("connection-state").textContent = `節點已連線；上次讀取：${lastRefreshAt}。畫面仍為暫定狀態。`;
@@ -656,7 +659,7 @@ $("proposal-form").addEventListener("submit", async event => {
   if (accepted) event.currentTarget.reset();
 });
 $("sync").addEventListener("click", async () => {
-  if (!nodeOnline || syncPending) return;
+  if (!nodeOnline || !nodeConfigValid || syncPending) return;
   syncPending = true;
   $("sync").disabled = true;
   try {
@@ -689,7 +692,7 @@ $("sync").addEventListener("click", async () => {
     notice(`同步未完成：${error.message}。先前的部分事件可能已寫入本機；請核對事件數後重試。`);
   } finally {
     syncPending = false;
-    $("sync").disabled = !nodeOnline || syncRunning || $("peer-count").textContent === "0";
+    $("sync").disabled = !nodeOnline || !nodeConfigValid || syncRunning || $("peer-count").textContent === "0";
   }
 });
 function renderPeerDifferences(differences) {

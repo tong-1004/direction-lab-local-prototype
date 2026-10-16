@@ -813,10 +813,10 @@ class NodeServerTest(unittest.TestCase):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
             script = response.read().decode("utf-8")
-        self.assertIn("if (!nodeOnline || syncPending) return;", script)
+        self.assertIn("if (!nodeOnline || !nodeConfigValid || syncPending) return;", script)
         self.assertIn('syncRunning = Boolean(state.sync_running);', script)
-        self.assertIn('$("sync").disabled = syncPending || syncRunning || peerCount === 0;', script)
-        self.assertIn('$("sync").disabled = !nodeOnline || syncRunning ||', script)
+        self.assertIn('$("sync").disabled = syncPending || syncRunning || peerCount === 0 || Boolean(configError);', script)
+        self.assertIn('$("sync").disabled = !nodeOnline || !nodeConfigValid || syncRunning ||', script)
         self.assertIn('state.sync_running ? "正在同步；請等待本輪結果"', script)
         self.assertIn("syncPending = false;", script)
 
@@ -943,6 +943,14 @@ class NodeServerTest(unittest.TestCase):
         refresh = script.split('async function refresh()', 1)[1].split('async function lookupById(', 1)[0]
         self.assertIn('if (configError) {\n    lookupSequence++;', refresh)
         self.assertIn('先前的單筆事件核對不可沿用，請重新載入並核對配置', refresh)
+
+    def test_browser_blocks_manual_sync_after_config_change(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn('nodeConfigValid = !configError;', script)
+        self.assertIn('if (!nodeOnline || !nodeConfigValid || syncPending) return;', script)
+        self.assertIn('peerCount === 0 || Boolean(configError)', script)
 
     def test_peer_difference_ids_are_inspectable_in_browser(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
