@@ -829,7 +829,8 @@ class NodeServerTest(unittest.TestCase):
             script = response.read().decode("utf-8")
         self.assertIn('id="compare-details"', page)
         self.assertIn('function renderPeerDifferences(differences)', script)
-        self.assertIn('for (const id of ids.slice(0, 20))', script)
+        self.assertIn('for (const id of ids.slice(shown, shown + 20))', script)
+        self.assertIn('more.addEventListener("click", showNext);', script)
         self.assertIn('renderPeerDifferences(report.differences);', script)
         self.assertIn('$("compare-details").hidden = true;', script)
 

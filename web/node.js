@@ -667,7 +667,7 @@ function renderPeerDifferences(differences) {
     difference && (difference.only_local?.length || difference.only_remote?.length));
   if (!groups.length) { target.hidden = true; return; }
   target.append(element("h2", "節點事件差異明細"),
-    element("p", "只顯示每類前 20 筆完整 ID；這是檢查當下的暫定快照。複製 ID 後可在對方節點獨立查詢。"));
+    element("p", "每次顯示 20 筆完整 ID；這是檢查當下的暫定快照。複製 ID 後可在對方節點獨立查詢。"));
   for (const [peer, difference] of groups) {
     let name = "相鄰節點";
     try { name = new URL(peer).host; } catch { /* Avoid treating peer text as markup. */ }
@@ -676,23 +676,37 @@ function renderPeerDifferences(differences) {
     for (const [field, label] of [["only_local", "只在本節點"], ["only_remote", "只在相鄰節點"]]) {
       const ids = Array.isArray(difference[field]) ? difference[field] : [];
       target.append(element("p", `${label}：${ids.length} 筆`));
-      for (const id of ids.slice(0, 20)) {
-        if (typeof id !== "string" || !/^[0-9a-f]{64}$/.test(id)) continue;
-        const row = element("div", "", "row");
-        const copy = element("button", "複製 ID", "secondary");
-        copy.type = "button";
-        copy.addEventListener("click", async () => {
-          try {
-            await navigator.clipboard.writeText(id);
-            notice("已複製事件 ID；請在另一節點獨立核對。");
-          } catch {
-            $("lookup-form").elements.event_id.value = id;
-            notice("無法複製；完整 ID 已放入查詢欄，可手動選取。");
-          }
-        });
-        row.append(element("code", id, "public-id"), copy);
-        target.append(row);
-      }
+      const list = element("div", "", "rows");
+      target.append(list);
+      let shown = 0;
+      const showNext = () => {
+        list.querySelector("button.show-more")?.remove();
+        for (const id of ids.slice(shown, shown + 20)) {
+          if (typeof id !== "string" || !/^[0-9a-f]{64}$/.test(id)) continue;
+          const row = element("div", "", "row");
+          const copy = element("button", "複製 ID", "secondary");
+          copy.type = "button";
+          copy.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(id);
+              notice("已複製事件 ID；請在另一節點獨立核對。");
+            } catch {
+              $("lookup-form").elements.event_id.value = id;
+              notice("無法複製；完整 ID 已放入查詢欄，可手動選取。");
+            }
+          });
+          row.append(element("code", id, "public-id"), copy);
+          list.append(row);
+        }
+        shown = Math.min(ids.length, shown + 20);
+        if (shown < ids.length) {
+          const more = element("button", `顯示接下來 20 筆（尚有 ${ids.length - shown} 筆）`, "secondary show-more");
+          more.type = "button";
+          more.addEventListener("click", showNext);
+          list.append(more);
+        }
+      };
+      showNext();
     }
   }
   target.hidden = false;
