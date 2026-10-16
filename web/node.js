@@ -149,6 +149,7 @@ function chooseDistinctRecipient() {
 
 let refreshSequence = 0;
 let observedNetwork = null;
+let observedProcessEpoch = null;
 async function refresh() {
   if (lastSuccessfulRefreshMs !== null && Date.now() - lastSuccessfulRefreshMs > 10000)
     pauseNodeActions("節點超過十秒沒有成功更新");
@@ -177,6 +178,11 @@ async function refresh() {
   if (observedNetwork === null && !configError) observedNetwork = network;
   else if (observedNetwork !== null && observedNetwork !== network)
     configError = new Error("此頁開啟期間節點測試網路已變更；請重新載入並核對配置");
+  if (typeof state.process_epoch !== "string" || !/^[0-9a-f]{32}$/.test(state.process_epoch))
+    configError = new Error("節點進程識別格式無效；請重新核對節點");
+  else if (observedProcessEpoch === null && !configError) observedProcessEpoch = state.process_epoch;
+  else if (observedProcessEpoch !== null && observedProcessEpoch !== state.process_epoch)
+    configError = new Error("此頁開啟期間節點已重啟；請重新載入並核對事件與配置");
   if (sequence !== refreshSequence) return;
   if (state.identity_mode === "public-key") {
     if (identityError) {
