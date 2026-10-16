@@ -441,6 +441,10 @@ async function lookupById(eventId) {
         await DirectionIdentity.verifyBrowserEvent(record.event, state.signature_domain)
       : state.identity_mode === "demo";
     if (sequence !== lookupSequence) return;
+    if (`${state.identity_mode}:${state.signature_domain}` !== observedNetwork) {
+      result.textContent = "此頁開啟期間節點測試網路已變更；先前與目前的事件核對不可混用，請重新載入並核對配置。";
+      return;
+    }
     if (record.id !== eventId || calculatedId !== eventId || record.signature_valid !== true ||
         !genesisMatches || !browserValid) {
       result.textContent = "節點回覆與查詢 ID 或簽章驗證不符；請勿視為已核對。";

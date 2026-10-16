@@ -814,6 +814,13 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('先前的單筆事件核對不可沿用', pause)
         self.assertIn('if (sequence !== lookupSequence) return;', script)
 
+    def test_lookup_rejects_changed_test_network(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn('`${state.identity_mode}:${state.signature_domain}` !== observedNetwork', script)
+        self.assertIn('先前與目前的事件核對不可混用', script)
+
     def test_identity_selects_keep_focus_when_poll_values_are_unchanged(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
