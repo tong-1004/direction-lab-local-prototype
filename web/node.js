@@ -5,6 +5,7 @@ const identityLabel = id => /^[0-9a-f]{64}$/.test(id) ? `${id.slice(0, 12)}…${
 let nodeOnline = false;
 let syncPending = false;
 let comparePending = false;
+let exportPending = false;
 let syncRunning = false;
 let lastRefreshAt = null;
 let lastSuccessfulRefreshMs = null;
@@ -219,7 +220,7 @@ async function refresh() {
   $("auto-sync").className = autoResult && !["ok", "no_peers"].includes(autoResult.state) ? "danger" : "";
   $("sync").disabled = syncPending || syncRunning || peerCount === 0;
   $("compare-peers").disabled = comparePending || peerCount === 0;
-  $("export-events").disabled = false;
+  $("export-events").disabled = exportPending;
   for (const control of $("lookup-form").elements) control.disabled = false;
   $("peer-warning").textContent = peerCount === 0
     ? "尚未設定相鄰節點：此節點不會主動轉送事件；請以 --peer 連接另一節點。"
@@ -626,7 +627,9 @@ $("compare-peers").addEventListener("click", async () => {
   }
 });
 $("export-events").addEventListener("click", async () => {
-  if (!nodeOnline) return;
+  if (!nodeOnline || exportPending) return;
+  exportPending = true;
+  $("export-events").disabled = true;
   try {
     const state = await request("/status");
     const snapshot = await request("/snapshot");
@@ -660,6 +663,9 @@ $("export-events").addEventListener("click", async () => {
   } catch (error) {
     pauseNodeActions();
     notice(`下載事件紀錄失敗：${error.message}`);
+  } finally {
+    exportPending = false;
+    $("export-events").disabled = !nodeOnline;
   }
 });
 $("create-identity").addEventListener("click", async () => {
