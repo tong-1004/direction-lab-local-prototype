@@ -810,9 +810,13 @@ def make_server(node: Node, port: int) -> ThreadingHTTPServer:
                     allowed_origin = False
                 if not allowed_origin:
                     return self.respond(403, {"error": "forbidden_origin"})
+            content_params = self.headers.get_params(header="content-type") or []
             if (len(self.headers.get_all("Content-Type", [])) != 1
                     or self.headers.get_content_type() != "application/json"
-                    or self.headers.get_content_charset() not in {None, "utf-8"}):
+                    or len(content_params) not in {1, 2}
+                    or (len(content_params) == 2 and
+                        (content_params[1][0].lower() != "charset"
+                         or str(content_params[1][1]).lower() != "utf-8"))):
                 return self.respond(415, {"error": "json_required"})
             if self.path not in {"/sync", "/events", "/actions"}:
                 return self.respond(404, {"error": "not_found"})
