@@ -821,6 +821,18 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('`${state.identity_mode}:${state.signature_domain}` !== observedNetwork', script)
         self.assertIn('先前與目前的事件核對不可混用', script)
 
+    def test_peer_difference_ids_are_inspectable_in_browser(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/", timeout=2) as response:
+            page = response.read().decode("utf-8")
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn('id="compare-details"', page)
+        self.assertIn('function renderPeerDifferences(differences)', script)
+        self.assertIn('for (const id of ids.slice(0, 20))', script)
+        self.assertIn('renderPeerDifferences(report.differences);', script)
+        self.assertIn('$("compare-details").hidden = true;', script)
+
     def test_identity_selects_keep_focus_when_poll_values_are_unchanged(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:

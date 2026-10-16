@@ -33,6 +33,8 @@ function pauseNodeActions(reason = "節點無法連線") {
   nodeOnline = false;
   lookupSequence++;
   $("lookup-result").textContent = "節點狀態已失效；先前的單筆事件核對不可沿用，請重新連線後查詢。";
+  $("compare-details").hidden = true;
+  $("compare-details").replaceChildren();
   renderedProposalsKey = null;
   const lastRead = lastRefreshAt ? `上次成功讀取：${lastRefreshAt}。` : "尚未成功讀取節點。";
   $("connection-state").textContent = `${reason}；${lastRead}畫面資料可能過期，交易與投票已暫停。`;
@@ -658,12 +660,53 @@ $("sync").addEventListener("click", async () => {
     $("sync").disabled = !nodeOnline || syncRunning || $("peer-count").textContent === "0";
   }
 });
+function renderPeerDifferences(differences) {
+  const target = $("compare-details");
+  target.replaceChildren();
+  const groups = Object.entries(differences || {}).filter(([, difference]) =>
+    difference && (difference.only_local?.length || difference.only_remote?.length));
+  if (!groups.length) { target.hidden = true; return; }
+  target.append(element("h2", "節點事件差異明細"),
+    element("p", "只顯示每類前 20 筆完整 ID；這是檢查當下的暫定快照。複製 ID 後可在對方節點獨立查詢。"));
+  for (const [peer, difference] of groups) {
+    let name = "相鄰節點";
+    try { name = new URL(peer).host; } catch { /* Avoid treating peer text as markup. */ }
+    const heading = element("h3", name);
+    target.append(heading);
+    for (const [field, label] of [["only_local", "只在本節點"], ["only_remote", "只在相鄰節點"]]) {
+      const ids = Array.isArray(difference[field]) ? difference[field] : [];
+      target.append(element("p", `${label}：${ids.length} 筆`));
+      for (const id of ids.slice(0, 20)) {
+        if (typeof id !== "string" || !/^[0-9a-f]{64}$/.test(id)) continue;
+        const row = element("div", "", "row");
+        const copy = element("button", "複製 ID", "secondary");
+        copy.type = "button";
+        copy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(id);
+            notice("已複製事件 ID；請在另一節點獨立核對。");
+          } catch {
+            $("lookup-form").elements.event_id.value = id;
+            notice("無法複製；完整 ID 已放入查詢欄，可手動選取。");
+          }
+        });
+        row.append(element("code", id, "public-id"), copy);
+        target.append(row);
+      }
+    }
+  }
+  target.hidden = false;
+}
+
 $("compare-peers").addEventListener("click", async () => {
   if (!nodeOnline || comparePending) return;
   comparePending = true;
   $("compare-peers").disabled = true;
+  $("compare-details").hidden = true;
+  $("compare-details").replaceChildren();
   try {
     const report = await request("/compare");
+    if (!nodeOnline) throw new Error("節點狀態已失效，請重新連線後檢查");
     const differences = Object.values(report.differences);
     const onlyLocal = differences.reduce((total, item) => total + item.only_local.length, 0);
     const onlyRemote = differences.reduce((total, item) => total + item.only_remote.length, 0);
@@ -677,6 +720,7 @@ $("compare-peers").addEventListener("click", async () => {
     if (onlyRemote) problems.push(`${onlyRemote} 筆只在相鄰節點`);
     if (report.balance_mismatch?.length) problems.push(`${report.balance_mismatch.length} 個相鄰節點的暫定點數不同`);
     if (report.proposal_mismatch?.length) problems.push(`${report.proposal_mismatch.length} 個相鄰節點的提案或票數不同`);
+    renderPeerDifferences(report.differences);
     notice(problems.length ? `節點比對發現問題：${problems.join("、")}。可同步缺少的事件；事件衝突不能靠同步裁決。`
       : "已連線的相鄰節點目前事件集合相同；這不是全網共識或最終結算證明。");
   } catch (error) { notice(`節點差異檢查失敗：${error.message}`); }
