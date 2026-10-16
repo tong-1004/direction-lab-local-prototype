@@ -801,7 +801,10 @@ def make_server(node: Node, port: int) -> ThreadingHTTPServer:
             if self.path not in {"/sync", "/events", "/actions"}:
                 return self.respond(404, {"error": "not_found"})
             try:
-                length = int(self.headers.get("Content-Length", "0"))
+                lengths = self.headers.get_all("Content-Length", [])
+                if len(lengths) != 1:
+                    raise ValueError("Expected one request length")
+                length = int(lengths[0])
                 if not 0 < length <= 65536:
                     raise ValueError("Invalid request size")
                 body = self.rfile.read(length)
