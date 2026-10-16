@@ -797,6 +797,14 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('notice("無法複製；請用查詢欄中的完整 ID 手動選取。");', script)
         self.assertIn('renderedConflictsKey = conflictsKey;', script)
 
+    def test_lookup_warns_when_valid_signed_event_is_conflicted(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn('const conflictSlots = Object.entries(state.conflicts || {})', script)
+        self.assertIn('Array.isArray(ids) && ids.includes(eventId)', script)
+        self.assertIn('有效簽章與相鄰節點可見都不能裁決哪筆應生效', script)
+
     def test_identity_selects_keep_focus_when_poll_values_are_unchanged(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:

@@ -485,7 +485,13 @@ async function lookupById(eventId) {
     }
     const verificationNote = state.identity_mode === "public-key"
       ? "此瀏覽器也以公鑰重新驗證簽章。" : "示範模式由本機節點回報簽章有效。";
-    result.textContent = `本節點保存的暫定事件。${verificationNote}${detail}。${peerNote}不代表最終結算。`;
+    const conflictSlots = Object.entries(state.conflicts || {})
+      .filter(([, ids]) => Array.isArray(ids) && ids.includes(eventId))
+      .map(([slot]) => slot);
+    const conflictNote = conflictSlots.length
+      ? `警告：此事件屬於本節點已知衝突（${conflictSlots.join("、")}）；有效簽章與相鄰節點可見都不能裁決哪筆應生效。`
+      : "";
+    result.textContent = `本節點保存的暫定事件。${verificationNote}${detail}。${conflictNote}${peerNote}不代表最終結算。`;
   } catch (error) {
     if (sequence !== lookupSequence) return;
     result.textContent = error.message === "event_not_found"
