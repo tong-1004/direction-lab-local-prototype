@@ -783,7 +783,10 @@ def make_server(node: Node, port: int) -> ThreadingHTTPServer:
         def do_POST(self):
             if not self.local_host():
                 return self.respond(403, {"error": "forbidden_host"})
-            origin = self.headers.get("Origin")
+            origins = self.headers.get_all("Origin", [])
+            if len(origins) > 1:
+                return self.respond(403, {"error": "forbidden_origin"})
+            origin = origins[0] if origins else None
             if origin:
                 try:
                     parsed_origin = urlparse(origin)
