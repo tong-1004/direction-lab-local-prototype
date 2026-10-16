@@ -234,7 +234,7 @@ class Node:
                 if (isinstance(acknowledgement, dict) and acknowledgement.get("accepted") is True
                         and acknowledgement.get("event") == event.id):
                     try:
-                        observed = self._remote_has_event(base, event)
+                        observed = self._remote_has_event(base, event, peer_status.get("process_epoch"))
                     except HTTPError as error:
                         if error.code != 404:
                             raise
@@ -287,11 +287,12 @@ class Node:
                 raise ValueError("Peer response must be a JSON object")
             return result
 
-    def _remote_has_event(self, base: str, event: Event) -> bool:
+    def _remote_has_event(self, base: str, event: Event, expected_epoch: str | None = None) -> bool:
         """Check a peer's signed event record after its acknowledgement."""
         record = self._request(base, "GET", f"/events/id/{event.id}")
         remote = decode_event(record["event"])
         return (record.get("id") == event.id and record.get("signature_valid") is True
+                and (expected_epoch is None or record.get("process_epoch") == expected_epoch)
                 and remote.id == event.id and self.peer.signer.verify(remote))
 
     def snapshot(self) -> dict:

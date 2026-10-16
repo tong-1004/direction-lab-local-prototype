@@ -452,6 +452,22 @@ class NodeServerTest(unittest.TestCase):
                          [{"peer": self.left.peers[0], "reason": "unverified_ack"}])
         self.assertNotIn(result["event"], self.right.peer.events)
 
+    def test_relay_does_not_claim_delivery_across_peer_restart(self):
+        original_request = self.left._request
+
+        def changed_record_epoch(base, method, path, body=None):
+            reply = original_request(base, method, path, body)
+            if method == "GET" and path.startswith("/events/id/"):
+                return {**reply, "process_epoch": "0" * 32}
+            return reply
+
+        with patch.object(self.left, "_request", side_effect=changed_record_epoch):
+            result = self.left.action("alice", "transfer", {"recipient": "bob", "amount": 1})
+        self.assertTrue(result["accepted"])
+        self.assertEqual(result["relay"]["delivered"], [])
+        self.assertEqual(result["relay"]["failed"],
+                         [{"peer": self.left.peers[0], "reason": "unverified_ack"}])
+
     def test_missing_remote_event_record_does_not_hide_local_acceptance(self):
         original_request = self.left._request
 
