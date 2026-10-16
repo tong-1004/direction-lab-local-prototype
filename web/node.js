@@ -632,11 +632,39 @@ $("export-events").addEventListener("click", async () => {
   $("export-events").disabled = true;
   try {
     const state = await request("/status");
-    const snapshot = await request("/snapshot");
+    const events = [];
+    let cursor = 0;
+    let snapshot = null;
+    while (true) {
+      const page = await request(`/snapshot/page?cursor=${cursor}&limit=128`);
+      if (!Number.isSafeInteger(page.event_count) || !Number.isSafeInteger(page.relayable_count)
+          || page.relayable_count < 0 || page.relayable_count > 10000
+          || page.cursor !== cursor || !Array.isArray(page.events) || page.events.length > 128
+          || (snapshot && (page.event_count !== snapshot.event_count
+            || page.relayable_count !== snapshot.relayable_count
+            || page.process_epoch !== snapshot.process_epoch
+            || page.signature_domain !== snapshot.signature_domain
+            || JSON.stringify(page.genesis) !== JSON.stringify(snapshot.genesis)))) {
+        throw new Error("事件分頁不一致，請重試。");
+      }
+      if (!snapshot) snapshot = page;
+      events.push(...page.events);
+      if (page.next_cursor === null) break;
+      if (!Number.isSafeInteger(page.next_cursor) || page.next_cursor !== cursor + page.events.length
+          || page.next_cursor > page.relayable_count || page.events.length === 0)
+        throw new Error("事件分頁游標無效，請重試。");
+      cursor = page.next_cursor;
+    }
+    const stateAfter = await request("/status");
     if (state.events !== snapshot.event_count
         || state.signature_domain !== snapshot.signature_domain
         || state.process_epoch !== snapshot.process_epoch
-        || JSON.stringify(state.genesis) !== JSON.stringify(snapshot.genesis)) {
+        || JSON.stringify(state.genesis) !== JSON.stringify(snapshot.genesis)
+        || events.length !== snapshot.relayable_count
+        || stateAfter.events !== state.events
+        || stateAfter.process_epoch !== state.process_epoch
+        || stateAfter.signature_domain !== state.signature_domain
+        || JSON.stringify(stateAfter.genesis) !== JSON.stringify(state.genesis)) {
       throw new Error("事件在下載時變動，請重試。");
     }
     const archive = {
@@ -647,7 +675,7 @@ $("export-events").addEventListener("click", async () => {
       source_peer: state.peer,
       reported_event_count: state.events,
       finality: state.finality,
-      events: snapshot.events
+      events
     };
     const url = URL.createObjectURL(new Blob([JSON.stringify(archive, null, 2)], {type: "application/json"}));
     const anchor = document.createElement("a");
@@ -656,10 +684,10 @@ $("export-events").addEventListener("click", async () => {
     anchor.download = `direction-lab-${peerFileName}-local-events.json`;
     anchor.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
-    const missing = snapshot.event_count - snapshot.events.length;
+    const missing = snapshot.event_count - events.length;
     notice(missing > 0
-      ? `已下載 ${snapshot.events.length} 筆可轉送事件；另有 ${missing} 筆本機紀錄未納入，這不是完整備份。請勿視為最終結算證明。`
-      : `已下載 ${snapshot.events.length} 筆暫定事件；請自行保管，勿視為最終結算證明。`);
+      ? `已下載 ${events.length} 筆可轉送事件；另有 ${missing} 筆本機紀錄未納入，這不是完整備份。請勿視為最終結算證明。`
+      : `已下載 ${events.length} 筆暫定事件；請自行保管，勿視為最終結算證明。`);
   } catch (error) {
     pauseNodeActions();
     notice(`下載事件紀錄失敗：${error.message}`);

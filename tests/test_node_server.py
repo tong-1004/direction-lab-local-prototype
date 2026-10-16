@@ -753,6 +753,16 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn("exportPending = false;", script)
         self.assertIn('$("export-events").disabled = !nodeOnline;', script)
 
+    def test_export_ui_uses_bounded_consistent_snapshot_pages(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn('request(`/snapshot/page?cursor=${cursor}&limit=128`)', script)
+        self.assertIn('page.next_cursor !== cursor + page.events.length', script)
+        self.assertIn('events.length !== snapshot.relayable_count', script)
+        self.assertIn('const stateAfter = await request("/status");', script)
+        self.assertNotIn('await request("/snapshot")', script)
+
     def test_vote_selection_survives_unchanged_status_poll(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
