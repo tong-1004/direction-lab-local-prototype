@@ -11,12 +11,15 @@ let lastRefreshAt = null;
 let lastSuccessfulRefreshMs = null;
 const pendingKey = "direction-lab:pending-test-event";
 let pendingAttempt = null;
-try { pendingAttempt = sessionStorage.getItem(pendingKey); } catch { /* In-memory guard still works. */ }
+let pendingStorageAvailable = true;
+try { pendingAttempt = sessionStorage.getItem(pendingKey); }
+catch { pendingStorageAvailable = false; }
 let submissionUncertain = Boolean(pendingAttempt);
 
 function rememberPendingAttempt(id) {
   pendingAttempt = id || "unknown";
-  try { sessionStorage.setItem(pendingKey, pendingAttempt); } catch { /* This page still guards retries. */ }
+  try { sessionStorage.setItem(pendingKey, pendingAttempt); }
+  catch { pendingStorageAvailable = false; }
 }
 
 function forgetPendingAttempt() {
@@ -459,7 +462,7 @@ $("lookup-form").addEventListener("submit", event => {
 });
 async function submit(action) {
   if (submissionUncertain) {
-    notice("上一筆事件送出結果待確認；請先核對事件清單，再重新載入頁面。不要直接重送。");
+    notice(`上一筆事件送出結果待確認；請先核對事件清單。${pendingStorageAvailable ? "核對後可重新載入頁面。" : "瀏覽器無法保存待確認標記，請勿重新載入本頁。"}不要直接重送。`);
     return false;
   }
   if (!nodeOnline) {
@@ -542,7 +545,7 @@ async function submit(action) {
         $("lookup-form").elements.event_id.value = attemptedId;
         if (nodeOnline) lookupById(attemptedId);
       }
-      notice(`事件送出結果待確認：可能已寫入本機。${attemptedId ? `已填入簽章事件 ID ${attemptedId}，可查看本節點核對結果。` : ""}請核對事件清單後再重新載入頁面，不要直接重送。`);
+      notice(`事件送出結果待確認：可能已寫入本機。${attemptedId ? `已填入簽章事件 ID ${attemptedId}，可查看本節點核對結果。` : ""}${pendingStorageAvailable ? "請核對事件清單後再重新載入頁面。" : "瀏覽器無法保存待確認標記；請勿重新載入本頁，先核對事件清單。"}不要直接重送。`);
       return false;
     }
     if (error.definitiveRejection) forgetPendingAttempt();
