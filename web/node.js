@@ -7,6 +7,7 @@ let syncPending = false;
 let comparePending = false;
 let exportPending = false;
 let renderedConflictsKey = null;
+let lookupSequence = 0;
 let syncRunning = false;
 let lastRefreshAt = null;
 let lastSuccessfulRefreshMs = null;
@@ -30,6 +31,8 @@ function forgetPendingAttempt() {
 
 function pauseNodeActions(reason = "節點無法連線") {
   nodeOnline = false;
+  lookupSequence++;
+  $("lookup-result").textContent = "節點狀態已失效；先前的單筆事件核對不可沿用，請重新連線後查詢。";
   renderedProposalsKey = null;
   const lastRead = lastRefreshAt ? `上次成功讀取：${lastRefreshAt}。` : "尚未成功讀取節點。";
   $("connection-state").textContent = `${reason}；${lastRead}畫面資料可能過期，交易與投票已暫停。`;
@@ -410,7 +413,6 @@ async function refresh() {
 }
 
 let submissionPending = false;
-let lookupSequence = 0;
 function disableSubmissionControls() {
   renderedProposalsKey = null;
   for (const form of [$("transfer-form"), $("proposal-form")]) {

@@ -805,6 +805,15 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('Array.isArray(ids) && ids.includes(eventId)', script)
         self.assertIn('有效簽章與相鄰節點可見都不能裁決哪筆應生效', script)
 
+    def test_lost_connection_invalidates_inflight_event_lookup(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        pause = script.split('function pauseNodeActions(', 1)[1].split('function identityOption(', 1)[0]
+        self.assertIn('lookupSequence++;', pause)
+        self.assertIn('先前的單筆事件核對不可沿用', pause)
+        self.assertIn('if (sequence !== lookupSequence) return;', script)
+
     def test_identity_selects_keep_focus_when_poll_values_are_unchanged(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
