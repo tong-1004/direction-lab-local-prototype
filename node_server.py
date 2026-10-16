@@ -139,6 +139,8 @@ class Node:
         self.auto_sync = {"enabled": False, "last_result": None}
         self.state_path = Path(state_path) if state_path else None
         self.state_integrity = "new"
+        if self.state_path and self.state_path.with_name(self.state_path.name + ".tmp").exists():
+            raise ValueError("Interrupted state write requires manual review of the .tmp file")
         if self.state_path and self.state_path.exists():
             saved = json.loads(self.state_path.read_text(encoding="utf-8"),
                                object_pairs_hook=_unique_json_object,

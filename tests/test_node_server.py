@@ -1517,6 +1517,19 @@ class NodeServerTest(unittest.TestCase):
             self.assertTrue(node.accept(event)["accepted"])
             self.assertEqual(Node("left", [], path).peer.balances["alice"], 70)
 
+    def test_restart_refuses_interrupted_state_write_without_deleting_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = f"{directory}/left.json"
+            node = Node("left", [], path)
+            self.assertTrue(node.action("alice", "transfer",
+                                        {"recipient": "bob", "amount": 1})["accepted"])
+            temporary = node.state_path.with_name("left.json.tmp")
+            temporary.write_text('{"events":', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "Interrupted state write"):
+                Node("left", [], path)
+            self.assertTrue(temporary.exists())
+            self.assertEqual(node.peer.balances["alice"], 99)
+
     def test_failed_state_flush_does_not_accept_event(self):
         with tempfile.TemporaryDirectory() as directory:
             path = f"{directory}/left.json"
