@@ -116,7 +116,7 @@ class NodeServerTest(unittest.TestCase):
             if path == "/status":
                 status_reads += 1
                 if status_reads == 2:
-                    return {**reply, "process_epoch": "replacement"}
+                    return {**reply, "process_epoch": "0" * 32}
             return reply
 
         with patch.object(self.left, "_request", side_effect=invalid_during_restart):
@@ -144,7 +144,7 @@ class NodeServerTest(unittest.TestCase):
             if path == "/status":
                 status_reads += 1
                 if status_reads == 2:
-                    return {**reply, "process_epoch": "replacement"}
+                    return {**reply, "process_epoch": "0" * 32}
             return reply
 
         with patch.object(self.left, "_request", side_effect=restarted_peer):
@@ -940,7 +940,9 @@ class NodeServerTest(unittest.TestCase):
     def test_malformed_snapshot_header_is_invalid_not_incompatible(self):
         for snapshot in ({"events": []},
                          {"signature_domain": "demo", "genesis": self.left.peer.genesis,
-                          "event_count": True, "events": []}):
+                          "event_count": True, "events": []},
+                         {"signature_domain": "demo", "genesis": self.left.peer.genesis,
+                          "event_count": 0, "events": [], "process_epoch": 3}):
             with self.subTest(snapshot=snapshot):
                 with patch.object(self.left, "_request", return_value=snapshot):
                     sync = self.left.sync()
@@ -966,7 +968,7 @@ class NodeServerTest(unittest.TestCase):
         def restarted_status(base, method, path, body=None):
             response = original_request(base, method, path, body)
             if method == "GET" and path == "/status":
-                response["process_epoch"] = "replacement"
+                response["process_epoch"] = "0" * 32
             return response
 
         with patch.object(self.left, "_request", side_effect=restarted_status):
@@ -979,6 +981,16 @@ class NodeServerTest(unittest.TestCase):
             return original_request(base, method, path, body)
 
         with patch.object(self.left, "_request", side_effect=malformed_status):
+            self.assertEqual(self.left.sync()["invalid"], self.left.peers)
+            self.assertEqual(self.left.compare_peers()["invalid"], self.left.peers)
+
+        def malformed_epoch(base, method, path, body=None):
+            response = original_request(base, method, path, body)
+            if method == "GET" and path == "/status":
+                response["process_epoch"] = 3
+            return response
+
+        with patch.object(self.left, "_request", side_effect=malformed_epoch):
             self.assertEqual(self.left.sync()["invalid"], self.left.peers)
             self.assertEqual(self.left.compare_peers()["invalid"], self.left.peers)
 

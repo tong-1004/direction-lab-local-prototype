@@ -321,6 +321,9 @@ class Node:
         if (not isinstance(remote, dict)
                 or (remote.get("protocol_version") is not None
                     and type(remote["protocol_version"]) is not int)
+                or (remote.get("process_epoch") is not None
+                    and (not isinstance(remote["process_epoch"], str)
+                         or not re.fullmatch(r"[0-9a-f]{32}", remote["process_epoch"])))
                 or not isinstance(remote.get("signature_domain"), str)
                 or not Node._valid_genesis_shape(remote.get("genesis"))
                 or type(remote.get("event_count")) is not int
@@ -333,6 +336,9 @@ class Node:
         if (not isinstance(status, dict)
                 or (status.get("protocol_version") is not None
                     and type(status["protocol_version"]) is not int)
+                or (status.get("process_epoch") is not None
+                    and (not isinstance(status["process_epoch"], str)
+                         or not re.fullmatch(r"[0-9a-f]{32}", status["process_epoch"])))
                 or type(status.get("events")) is not int
                 or status["events"] < 0
                 or not isinstance(status.get("signature_domain"), str)
