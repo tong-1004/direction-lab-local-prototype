@@ -799,7 +799,11 @@ class NodeServerTest(unittest.TestCase):
             script = response.read().decode("utf-8")
         handler = script.split('$("clear-uncertain").addEventListener("click", async () => {', 1)[1]
         handler = handler.split('refreshBrowserIdentities().catch', 1)[0]
-        self.assertLess(handler.index('await refresh();'), handler.index('forgetPendingAttempt();'))
+        self.assertLess(handler.index('const beforeReady = await refresh();'),
+                        handler.index('forgetPendingAttempt();'))
+        self.assertIn('if (!nodeOnline || !beforeReady)', handler)
+        self.assertIn('if (!nodeOnline || !afterReady)', handler)
+        self.assertIn('return !configError;', script)
         self.assertIn('rememberPendingAttempt(attemptedId);', handler)
         self.assertIn('submissionUncertain = true;', handler)
         self.assertIn('button.hidden = false;', handler)

@@ -365,6 +365,7 @@ async function refresh() {
   lastRefreshAt = new Date().toLocaleTimeString("zh-TW", {hour12: false});
   $("connection-state").textContent = `節點已連線；上次讀取：${lastRefreshAt}。畫面仍為暫定狀態。`;
   $("connection-state").className = "";
+  return !configError;
 }
 
 let submissionPending = false;
@@ -753,12 +754,12 @@ $("clear-uncertain").addEventListener("click", async () => {
   button.disabled = true;
   const attemptedId = pendingAttempt;
   try {
-    await refresh();
-    if (!nodeOnline) throw new Error("節點狀態尚未核對");
+    const beforeReady = await refresh();
+    if (!nodeOnline || !beforeReady) throw new Error("節點配置尚未核對");
     forgetPendingAttempt();
     submissionUncertain = false;
-    await refresh();
-    if (!nodeOnline) throw new Error("節點狀態尚未核對");
+    const afterReady = await refresh();
+    if (!nodeOnline || !afterReady) throw new Error("節點配置尚未核對");
     button.hidden = true;
     notice("已解除此頁送出暫停；請確認沒有重複建立同一筆測試事件。");
   } catch {
