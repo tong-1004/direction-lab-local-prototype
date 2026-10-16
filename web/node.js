@@ -118,6 +118,8 @@ function element(tag, text, className) {
 }
 
 function options(select, values) {
+  if (select.options.length === values.length &&
+      values.every((value, index) => select.options[index].value === value)) return;
   const selected = select.value;
   select.replaceChildren(...values.map(identityOption));
   if (values.includes(selected)) select.value = selected;

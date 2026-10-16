@@ -695,6 +695,14 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn("voter.value = priorVoters.get(id);", script)
         self.assertIn("renderedProposalsKey = null;", script)
 
+    def test_identity_selects_keep_focus_when_poll_values_are_unchanged(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn("select.options.length === values.length", script)
+        self.assertIn("values.every((value, index) => select.options[index].value === value)", script)
+        self.assertIn("if (values.includes(selected)) select.value = selected;", script)
+
     def test_ui_blocks_retry_when_event_post_outcome_is_unknown(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
