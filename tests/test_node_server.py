@@ -785,6 +785,16 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn("voter.value = priorVoters.get(id);", script)
         self.assertIn("renderedProposalsKey = null;", script)
 
+    def test_conflict_events_have_direct_lookup_controls(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn('if (conflictsKey !== renderedConflictsKey) {', script)
+        self.assertIn('button.addEventListener("click", () => {', script)
+        self.assertIn('$("lookup-form").elements.event_id.value = id;', script)
+        self.assertIn('lookupById(id);', script)
+        self.assertIn('renderedConflictsKey = conflictsKey;', script)
+
     def test_identity_selects_keep_focus_when_poll_values_are_unchanged(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:

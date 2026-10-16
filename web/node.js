@@ -6,6 +6,7 @@ let nodeOnline = false;
 let syncPending = false;
 let comparePending = false;
 let exportPending = false;
+let renderedConflictsKey = null;
 let syncRunning = false;
 let lastRefreshAt = null;
 let lastSuccessfulRefreshMs = null;
@@ -359,10 +360,35 @@ async function refresh() {
     history.append(row);
   }
   if (!recent.length) history.textContent = "目前沒有事件。";
-  const conflicts = Object.entries(state.conflicts);
-  $("conflicts").textContent = conflicts.length
-    ? `本節點已暫停建立新交易、提案與投票；同步仍可能補入有效簽章的事件。${conflicts.map(([slot, ids]) => `${slot}：${ids.length} 個互相衝突的事件`).join("；")}`
-    : "目前沒有已知衝突。";
+  const conflicts = Object.entries(state.conflicts).sort(([left], [right]) => left.localeCompare(right));
+  const conflictsKey = JSON.stringify(conflicts);
+  if (conflictsKey !== renderedConflictsKey) {
+    const target = $("conflicts");
+    target.replaceChildren();
+    if (!conflicts.length) target.textContent = "目前沒有已知衝突。";
+    else {
+      target.append(element("p", "本節點已暫停建立新交易、提案與投票；同步仍可能補入有效簽章的事件。"));
+      for (const [slot, ids] of conflicts) {
+        const row = element("div", "", "row");
+        row.append(element("span", `${slot}：${ids.length} 個互相衝突的事件`));
+        const controls = element("div", "", "vote-controls");
+        for (const id of ids) {
+          if (typeof id !== "string" || !/^[0-9a-f]{64}$/.test(id)) continue;
+          const button = element("button", `查詢 ${id.slice(0, 12)}…`, "secondary");
+          button.type = "button";
+          button.title = id;
+          button.addEventListener("click", () => {
+            $("lookup-form").elements.event_id.value = id;
+            lookupById(id);
+          });
+          controls.append(button);
+        }
+        row.append(controls);
+        target.append(row);
+      }
+    }
+    renderedConflictsKey = conflictsKey;
+  }
   nodeOnline = true;
   lastSuccessfulRefreshMs = Date.now();
   lastRefreshAt = new Date().toLocaleTimeString("zh-TW", {hour12: false});
