@@ -187,12 +187,17 @@ async function refresh() {
       const leftPort = state.peer === "right" ? otherPort : port;
       const rightPort = state.peer === "right" ? port : otherPort;
       $("pair-command").textContent = `python run_local_pair.py --left-port ${leftPort} --right-port ${rightPort} --public-genesis data/peers/direction-lab-genesis.json`;
+      $("copy-pair-command").disabled = false;
     } else {
       $("pair-command").textContent = "相鄰連接埠超出範圍；請自行指定兩個有效連接埠。";
+      $("copy-pair-command").disabled = true;
     }
+    $("copy-genesis-command").disabled = false;
   } else {
     $("genesis-command").textContent = "請依此節點實際名稱與連接埠指定公鑰設定及獨立狀態檔。";
     $("pair-command").textContent = "此節點不是預設 left/right；請依實際配置啟動雙節點。";
+    $("copy-genesis-command").disabled = true;
+    $("copy-pair-command").disabled = true;
   }
   $("event-count").textContent = state.events;
   $("state-warning").textContent = state.state_integrity === "legacy_unchecked"
@@ -626,6 +631,23 @@ $("compare-peers").addEventListener("click", async () => {
     $("compare-peers").disabled = !nodeOnline || $("peer-count").textContent === "0";
   }
 });
+for (const [buttonId, commandId] of [["copy-genesis-command", "genesis-command"],
+                                      ["copy-pair-command", "pair-command"]]) {
+  $(buttonId).addEventListener("click", async () => {
+    const command = $(commandId).textContent;
+    if ($(buttonId).disabled || !command.startsWith("python ")) return;
+    if (!navigator.clipboard?.writeText) {
+      notice("此瀏覽器無法複製命令；請手動選取畫面中的命令。");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(command);
+      notice("已複製啟動命令；請確認設定檔位置後在本機終端執行。");
+    } catch {
+      notice("複製命令失敗；請手動選取畫面中的命令。");
+    }
+  });
+}
 $("export-events").addEventListener("click", async () => {
   if (!nodeOnline || exportPending) return;
   exportPending = true;

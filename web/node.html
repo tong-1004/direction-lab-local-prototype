@@ -28,6 +28,8 @@
         <button type="submit" class="secondary">下載公鑰測試網路設定</button>
       </form>
       <p>先在此連接埠建立至少一個身分。若要在另一節點各自簽署，先到其連接埠建立身分，複製其公鑰 ID 貼入上方；不需交換私鑰。至少兩個不同 ID 後，下載只有公鑰與測試點數的 JSON。將下載檔放入專案的 <code>data/peers/</code>（Git 已排除），停止目前節點，再以同一連接埠執行 <code id="genesis-command"></code>；或用一個命令啟動互連的雙節點：<code id="pair-command"></code>。兩個節點須使用同一設定檔。這只是本機封閉測試。</p>
+      <button id="copy-genesis-command" class="secondary" type="button" disabled>複製單節點啟動命令</button>
+      <button id="copy-pair-command" class="secondary" type="button" disabled>複製雙節點啟動命令</button>
     </section>
     <section class="status card" aria-live="polite">
       <div><p class="label">目前節點</p><strong id="peer-name">讀取中…</strong></div>

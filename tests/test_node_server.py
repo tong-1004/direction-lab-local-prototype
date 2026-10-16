@@ -763,6 +763,19 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('const stateAfter = await request("/status");', script)
         self.assertNotIn('await request("/snapshot")', script)
 
+    def test_start_commands_have_copy_buttons_without_auto_execution(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/", timeout=2) as response:
+            page = response.read().decode("utf-8")
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn('id="copy-genesis-command"', page)
+        self.assertIn('id="copy-pair-command"', page)
+        self.assertIn('$("copy-pair-command").disabled = true;', script)
+        self.assertIn('$("copy-genesis-command").disabled = true;', script)
+        self.assertIn('await navigator.clipboard.writeText(command);', script)
+        self.assertIn('if ($(buttonId).disabled || !command.startsWith("python ")) return;', script)
+
     def test_vote_selection_survives_unchanged_status_poll(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
