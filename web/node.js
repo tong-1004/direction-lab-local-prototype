@@ -195,6 +195,10 @@ async function refresh() {
     pauseNodeActions("節點在讀取期間重啟或事件變動，等待重新整理");
     return;
   }
+  if (configError) {
+    lookupSequence++;
+    $("lookup-result").textContent = "節點配置或進程已變動；先前的單筆事件核對不可沿用，請重新載入並核對配置。";
+  }
   if (comparedNodeVersion !== null &&
       comparedNodeVersion !== `${state.events}:${state.process_epoch}`) {
     $("compare-details").hidden = true;

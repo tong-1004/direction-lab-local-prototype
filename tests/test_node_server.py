@@ -905,6 +905,14 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('state.process_epoch !== observedProcessEpoch || record.process_epoch !== state.process_epoch', lookup)
         self.assertIn('先前與目前的事件核對不可混用', lookup)
 
+    def test_config_change_invalidates_visible_and_inflight_lookup(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        refresh = script.split('async function refresh()', 1)[1].split('async function lookupById(', 1)[0]
+        self.assertIn('if (configError) {\n    lookupSequence++;', refresh)
+        self.assertIn('先前的單筆事件核對不可沿用，請重新載入並核對配置', refresh)
+
     def test_peer_difference_ids_are_inspectable_in_browser(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/", timeout=2) as response:
