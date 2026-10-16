@@ -594,6 +594,12 @@ class Node:
                                      and record.get("signature_valid") is True
                                      and remote.id == event_id and signer.verify(remote)
                                      else "invalid")
+                    record_epoch = record.get("process_epoch")
+                    if record_epoch is not None:
+                        if not isinstance(record_epoch, str) or not re.fullmatch(r"[0-9a-f]{32}", record_epoch):
+                            results[base] = "invalid"
+                        elif results[base] == "observed" and record_epoch != status.get("process_epoch"):
+                            results[base] = "incomplete"
                 status_after = self._request(base, "GET", "/status")
                 self._check_status_shape(status_after)
                 if (results[base] != "invalid" and

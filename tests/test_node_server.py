@@ -150,6 +150,15 @@ class NodeServerTest(unittest.TestCase):
         with patch.object(self.left, "_request", side_effect=restarted_peer):
             self.assertEqual(self.left.check_event_peers(event.id)["peers"][self.left.peers[0]],
                              "incomplete")
+        def record_from_other_process(peer, method, path, body=None):
+            reply = original_request(peer, method, path, body)
+            if path == f"/events/id/{event.id}":
+                return {**reply, "process_epoch": "0" * 32}
+            return reply
+
+        with patch.object(self.left, "_request", side_effect=record_from_other_process):
+            self.assertEqual(self.left.check_event_peers(event.id)["peers"][self.left.peers[0]],
+                             "incomplete")
         added = False
 
         def local_change(peer, method, path, body=None):
