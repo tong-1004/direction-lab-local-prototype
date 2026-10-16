@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Direction Lab｜交易與投票測試網</title>
+  <link rel="stylesheet" href="/node.css">
+  <script src="/identity.js" defer></script>
+  <script src="/node.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <div><p class="eyebrow">DIRECTION LAB · LOCAL TEST NETWORK</p><h1>交易與投票測試網</h1></div>
+      <span class="badge">無價值測試點數</span>
+    </header>
+    <p id="intro" class="intro">在這個節點建立交易或提案，其他連線節點會收到同一事件。這是本機實驗介面；畫面中的 Alice、Bob、Chen 是公開的測試身分。</p>
+    <p id="identity-mode" role="status">正在讀取身分模式…</p>
+    <section class="card" aria-labelledby="browser-identity-title">
+      <h2 id="browser-identity-title">本機瀏覽器測試身分</h2>
+      <p>按一下建立公鑰身分。私鑰留在此瀏覽器與此連接埠，不會送到節點；清除瀏覽器資料可能使它永久遺失。將公鑰 ID 列入測試網路初始配置並重啟節點後，才可用它點擊簽署交易與投票。</p>
+      <button id="create-identity" type="button">建立本機身分</button>
+      <div id="browser-identities" class="rows" aria-live="polite"></div>
+      <form id="genesis-form">
+        <label>測試網路 ID <input name="network" value="sandbox-1" maxlength="64" required></label>
+        <label>每人初始測試點數 <input name="credits" type="number" min="0" max="1000000" step="1" value="100" required></label>
+        <label>其他節點的公鑰 ID（可選，每行一個）<textarea name="additional_ids" maxlength="8192" rows="3" placeholder="在另一個連接埠建立身分後，貼上它的公鑰 ID"></textarea></label>
+        <button type="submit" class="secondary">下載公鑰測試網路設定</button>
+      </form>
+      <p>先在此連接埠建立至少一個身分。若要在另一節點各自簽署，先到其連接埠建立身分，複製其公鑰 ID 貼入上方；不需交換私鑰。至少兩個不同 ID 後，下載只有公鑰與測試點數的 JSON。將下載檔放入專案的 <code>data/peers/</code>（Git 已排除），停止目前節點，再以同一連接埠執行 <code id="genesis-command"></code>；或用一個命令啟動互連的雙節點：<code id="pair-command"></code>。兩個節點須使用同一設定檔。這只是本機封閉測試。</p>
+    </section>
+    <section class="status card" aria-live="polite">
+      <div><p class="label">目前節點</p><strong id="peer-name">讀取中…</strong></div>
+      <div><p class="label">事件</p><strong id="event-count">—</strong></div>
+      <div><p class="label">已設定相鄰節點</p><strong id="peer-count">—</strong></div>
+      <div><p class="label">自動同步</p><strong id="auto-sync">—</strong></div>
+      <div><p class="label">最終性</p><strong id="finality">—</strong></div>
+      <button id="sync" class="secondary" type="button">與其他節點同步</button>
+      <button id="compare-peers" class="secondary" type="button">檢查節點事件差異</button>
+      <button id="export-events" class="secondary" type="button">下載事件紀錄</button>
+    </section>
+    <p>事件紀錄下載至此裝置，不會自動上傳；其中可能包含你輸入的提案標題。下載檔只是可供檢查的暫定事件，不是交易或投票完成證明。</p>
+    <p id="connection-state" class="danger" role="status" aria-live="polite">正在連接節點；操作暫停。</p>
+    <p id="state-warning" role="status" aria-live="polite"></p>
+    <p id="peer-warning" role="status"></p>
+    <div id="peer-links" class="peer-links" aria-label="相鄰節點頁面"></div>
+    <p id="notice" role="status" aria-live="polite"></p>
+    <button id="clear-uncertain" class="secondary" type="button" hidden>已核對事件，解除送出暫停</button>
+    <div class="grid">
+      <section class="card"><h2>測試交易</h2><p>選擇測試身分，轉送不具現實價值的點數。</p>
+        <form id="transfer-form">
+          <label>從誰轉出 <select name="author" required><option>alice</option><option>bob</option><option>chen</option></select></label>
+          <label>轉給誰 <select name="recipient" required><option>bob</option><option>alice</option><option>chen</option></select></label>
+          <label>點數 <input name="amount" type="number" min="1" step="1" value="10" required></label>
+          <button type="submit">送出測試交易</button>
+        </form>
+      </section>
+      <section class="card"><h2>建立提案</h2><p>提案與投票也作為事件傳給其他節點。</p>
+        <form id="proposal-form">
+          <label>提案人 <select name="author"><option>alice</option><option>bob</option><option>chen</option></select></label>
+          <label>提案標題 <input name="title" maxlength="200" placeholder="例如：共同菜園計畫" required></label>
+          <button type="submit">建立測試提案</button>
+        </form>
+      </section>
+    </div>
+    <div class="grid">
+      <section class="card"><h2>本節點暫定點數</h2><p id="balance-warning" role="status" aria-live="polite">尚未讀取節點；點數不可視為可用餘額。</p><div id="balances" class="rows"></div></section>
+      <section class="card"><h2>提案與投票</h2><div id="proposals" class="rows"><p>目前沒有提案。</p></div></section>
+    </div>
+    <section class="card history"><h2>依事件 ID 核對</h2><p>在本節點查詢完整事件 ID；也可將同一 ID 貼到相鄰節點核對。兩處都能查到，不代表全網共識或最終結算。</p>
+      <form id="lookup-form"><label>完整事件 ID <input name="event_id" pattern="[0-9a-f]{64}" maxlength="64" required></label><button type="submit" class="secondary">查詢本節點</button></form>
+      <p id="lookup-result" role="status" aria-live="polite"></p>
+      <h2>最近事件</h2><div id="history" class="rows">目前沒有事件。</div>
+    </section>
+    <section class="card"><h2>節點衝突</h2><div id="conflicts">目前沒有已知衝突。</div></section>
+    <footer id="disclaimer">測試身分使用公開示範密鑰，沒有真實資產、權利裁決或正式交易最終性。</footer>
+  </main>
+</body>
+</html>
