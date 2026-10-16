@@ -292,6 +292,20 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn(b" 403 ", response)
         self.assertEqual(self.left.peer.events, {})
 
+    def test_duplicate_content_types_cannot_create_event(self):
+        port = self.servers[0].server_port
+        body = json.dumps({"author": "alice", "kind": "transfer",
+                           "payload": {"recipient": "bob", "amount": 1}}).encode("utf-8")
+        request = (f"POST /actions HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\n"
+                   "Content-Type: application/json\r\nContent-Type: text/plain\r\n"
+                   f"Content-Length: {len(body)}\r\nConnection: close\r\n\r\n").encode("ascii") + body
+        with socket.create_connection(("127.0.0.1", port), timeout=2) as connection:
+            connection.sendall(request)
+            connection.shutdown(socket.SHUT_WR)
+            response = connection.recv(4096)
+        self.assertIn(b" 415 ", response)
+        self.assertEqual(self.left.peer.events, {})
+
     def test_peer_response_is_bounded_before_json_parse(self):
         oversized = BytesIO(b" " * (MAX_PEER_RESPONSE_BYTES + 1))
         with patch("node_server.urlopen", return_value=oversized):
