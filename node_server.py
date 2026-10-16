@@ -184,11 +184,18 @@ class Node:
                      "genesis": candidate.genesis,
                      "events": events,
                      "state_digest": hashlib.sha256(_canonical({"events": events})).hexdigest()}
-            with temporary.open("w", encoding="utf-8") as stream:
-                json.dump(saved, stream, ensure_ascii=False)
-                stream.flush()
-                os.fsync(stream.fileno())
-            os.replace(temporary, self.state_path)
+            try:
+                with temporary.open("w", encoding="utf-8") as stream:
+                    json.dump(saved, stream, ensure_ascii=False)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                os.replace(temporary, self.state_path)
+            except OSError:
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    pass
+                raise
             self.peer = candidate
             self.state_integrity = "verified"
         return accepted

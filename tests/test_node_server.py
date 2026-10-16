@@ -1513,6 +1513,7 @@ class NodeServerTest(unittest.TestCase):
                     node.accept(event)
             self.assertEqual(node.peer.balances["alice"], 100)
             self.assertNotIn(event.id, node.peer.events)
+            self.assertFalse(node.state_path.with_name("left.json.tmp").exists())
             self.assertTrue(node.accept(event)["accepted"])
             self.assertEqual(Node("left", [], path).peer.balances["alice"], 70)
 
@@ -1528,6 +1529,7 @@ class NodeServerTest(unittest.TestCase):
             self.assertEqual(node.peer.balances["alice"], 100)
             self.assertNotIn(event.id, node.peer.events)
             self.assertFalse(node.state_path.exists())
+            self.assertFalse(node.state_path.with_name("left.json.tmp").exists())
             self.assertTrue(node.accept(event)["accepted"])
 
     def test_http_reports_storage_failure_without_accepting_event(self):
