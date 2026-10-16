@@ -25,6 +25,7 @@ function forgetPendingAttempt() {
 
 function pauseNodeActions(reason = "節點無法連線") {
   nodeOnline = false;
+  renderedProposalsKey = null;
   const lastRead = lastRefreshAt ? `上次成功讀取：${lastRefreshAt}。` : "尚未成功讀取節點。";
   $("connection-state").textContent = `${reason}；${lastRead}畫面資料可能過期，交易與投票已暫停。`;
   $("connection-state").className = "danger";
@@ -55,6 +56,7 @@ async function refreshBrowserIdentities() {
 }
 
 let renderedIdentityKey = null;
+let renderedProposalsKey = null;
 function renderBrowserIdentities(list) {
   const identityKey = JSON.stringify(list);
   if (identityKey === renderedIdentityKey) return;
@@ -277,33 +279,41 @@ async function refresh() {
     balances.append(row);
   }
   const proposals = $("proposals");
-  proposals.replaceChildren();
-  for (const [id, item] of Object.entries(state.proposals)) {
-    const card = element("article", "", "proposal");
-    card.append(element("h3", item.title), element("p", `提案人 ${identityLabel(item.author)} · 同意 ${item.yes} · 反對 ${item.no}`));
-    const controls = element("div", "", "vote-controls");
-    const voter = document.createElement("select");
-    voter.setAttribute("aria-label", `${item.title} 的投票人`);
-    for (const person of signedMode ? owned : people) voter.append(identityOption(person));
-    controls.append(voter);
-    const voteButtons = [];
-    for (const [label, approve] of [["同意", true], ["反對", false]]) {
-      const button = element("button", label);
-      button.type = "button";
-      button.addEventListener("click", () => submit({author: voter.value, kind: "vote", payload: {proposal: id, approve}}));
-      controls.append(button);
-      voteButtons.push(button);
+  const proposalsKey = JSON.stringify([state.proposals, signedMode, owned, actionsBlocked]);
+  if (proposalsKey !== renderedProposalsKey) {
+    const priorVoters = new Map([...proposals.querySelectorAll("article[data-proposal-id]")]
+      .map(card => [card.dataset.proposalId, card.querySelector("select")?.value]));
+    proposals.replaceChildren();
+    for (const [id, item] of Object.entries(state.proposals)) {
+      const card = element("article", "", "proposal");
+      card.dataset.proposalId = id;
+      card.append(element("h3", item.title), element("p", `提案人 ${identityLabel(item.author)} · 同意 ${item.yes} · 反對 ${item.no}`));
+      const controls = element("div", "", "vote-controls");
+      const voter = document.createElement("select");
+      voter.setAttribute("aria-label", `${item.title} 的投票人`);
+      for (const person of signedMode ? owned : people) voter.append(identityOption(person));
+      if ([...voter.options].some(option => option.value === priorVoters.get(id))) voter.value = priorVoters.get(id);
+      controls.append(voter);
+      const voteButtons = [];
+      for (const [label, approve] of [["同意", true], ["反對", false]]) {
+        const button = element("button", label);
+        button.type = "button";
+        button.addEventListener("click", () => submit({author: voter.value, kind: "vote", payload: {proposal: id, approve}}));
+        controls.append(button);
+        voteButtons.push(button);
+      }
+      const updateVoteButtons = () => {
+        for (const button of voteButtons) button.disabled = actionsBlocked || !voter.value || Object.hasOwn(item.votes, voter.value);
+      };
+      voter.addEventListener("change", updateVoteButtons);
+      updateVoteButtons();
+      voter.disabled = actionsBlocked;
+      if (!signedMode || owned.length) card.append(controls);
+      proposals.append(card);
     }
-    const updateVoteButtons = () => {
-      for (const button of voteButtons) button.disabled = actionsBlocked || !voter.value || Object.hasOwn(item.votes, voter.value);
-    };
-    voter.addEventListener("change", updateVoteButtons);
-    updateVoteButtons();
-    voter.disabled = actionsBlocked;
-    if (!signedMode || owned.length) card.append(controls);
-    proposals.append(card);
+    if (!proposals.childElementCount) proposals.append(element("p", "目前沒有提案。"));
+    renderedProposalsKey = proposalsKey;
   }
-  if (!proposals.childElementCount) proposals.append(element("p", "目前沒有提案。"));
   const history = $("history");
   history.replaceChildren();
   const recent = eventData.events.reverse();
@@ -352,6 +362,7 @@ async function refresh() {
 let submissionPending = false;
 let lookupSequence = 0;
 function disableSubmissionControls() {
+  renderedProposalsKey = null;
   for (const form of [$("transfer-form"), $("proposal-form")]) {
     for (const control of form.elements) control.disabled = true;
   }

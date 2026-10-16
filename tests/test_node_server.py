@@ -686,6 +686,15 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn("comparePending = false;", script)
         self.assertIn('$("compare-peers").disabled = !nodeOnline ||', script)
 
+    def test_vote_selection_survives_unchanged_status_poll(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn("if (proposalsKey !== renderedProposalsKey) {", script)
+        self.assertIn("card.dataset.proposalId = id;", script)
+        self.assertIn("voter.value = priorVoters.get(id);", script)
+        self.assertIn("renderedProposalsKey = null;", script)
+
     def test_ui_blocks_retry_when_event_post_outcome_is_unknown(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
