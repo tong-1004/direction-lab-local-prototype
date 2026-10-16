@@ -381,7 +381,19 @@ async function refresh() {
             $("lookup-form").elements.event_id.value = id;
             lookupById(id);
           });
-          controls.append(button);
+          const copy = element("button", "複製完整 ID", "secondary");
+          copy.type = "button";
+          copy.title = id;
+          copy.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(id);
+              notice("已複製衝突事件的完整 ID；請在另一節點獨立核對。");
+            } catch {
+              notice("無法複製；請用查詢欄中的完整 ID 手動選取。");
+              $("lookup-form").elements.event_id.value = id;
+            }
+          });
+          controls.append(button, copy);
         }
         row.append(controls);
         target.append(row);

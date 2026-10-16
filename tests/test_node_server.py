@@ -793,6 +793,8 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('button.addEventListener("click", () => {', script)
         self.assertIn('$("lookup-form").elements.event_id.value = id;', script)
         self.assertIn('lookupById(id);', script)
+        self.assertIn('await navigator.clipboard.writeText(id);', script)
+        self.assertIn('notice("無法複製；請用查詢欄中的完整 ID 手動選取。");', script)
         self.assertIn('renderedConflictsKey = conflictsKey;', script)
 
     def test_identity_selects_keep_focus_when_poll_values_are_unchanged(self):
