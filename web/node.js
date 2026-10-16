@@ -748,11 +748,26 @@ $("genesis-form").addEventListener("submit", async event => {
   } catch (error) { notice(`產生設定失敗：${error.message}`); }
 });
 $("clear-uncertain").addEventListener("click", async () => {
-  forgetPendingAttempt();
-  submissionUncertain = false;
-  $("clear-uncertain").hidden = true;
-  try { await refresh(); notice("已解除此頁送出暫停；請確認沒有重複建立同一筆測試事件。"); }
-  catch { pauseNodeActions(); notice("節點仍無法連線，交易與投票保持暫停。"); }
+  const button = $("clear-uncertain");
+  if (button.disabled) return;
+  button.disabled = true;
+  const attemptedId = pendingAttempt;
+  try {
+    await refresh();
+    if (!nodeOnline) throw new Error("節點狀態尚未核對");
+    forgetPendingAttempt();
+    submissionUncertain = false;
+    await refresh();
+    if (!nodeOnline) throw new Error("節點狀態尚未核對");
+    button.hidden = true;
+    notice("已解除此頁送出暫停；請確認沒有重複建立同一筆測試事件。");
+  } catch {
+    rememberPendingAttempt(attemptedId);
+    submissionUncertain = true;
+    button.hidden = false;
+    pauseNodeActions();
+    notice("節點仍無法核對；送出結果待確認，交易與投票保持暫停。");
+  } finally { button.disabled = false; }
 });
 refreshBrowserIdentities().catch(error => notice(`無法讀取本機身分：${error.message}`));
 pauseNodeActions();

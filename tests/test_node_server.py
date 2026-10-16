@@ -793,6 +793,18 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn("values.every((value, index) => select.options[index].value === value)", script)
         self.assertIn("if (values.includes(selected)) select.value = selected;", script)
 
+    def test_uncertain_result_survives_failed_manual_clear(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        handler = script.split('$("clear-uncertain").addEventListener("click", async () => {', 1)[1]
+        handler = handler.split('refreshBrowserIdentities().catch', 1)[0]
+        self.assertLess(handler.index('await refresh();'), handler.index('forgetPendingAttempt();'))
+        self.assertIn('rememberPendingAttempt(attemptedId);', handler)
+        self.assertIn('submissionUncertain = true;', handler)
+        self.assertIn('button.hidden = false;', handler)
+        self.assertIn('pauseNodeActions();', handler)
+
     def test_ui_blocks_retry_when_event_post_outcome_is_unknown(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
