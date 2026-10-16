@@ -563,6 +563,23 @@ class NodeServerTest(unittest.TestCase):
                          [{"event": result["event"], "http_status": 404}])
         self.assertNotIn(result["event"], self.right.peer.events)
 
+    def test_sync_does_not_confirm_post_across_peer_restart(self):
+        self.left.peers = []
+        result = self.left.action("alice", "transfer", {"recipient": "bob", "amount": 1})
+        self.left.peers = [f"http://127.0.0.1:{self.servers[1].server_port}"]
+        original_request = self.left._request
+
+        def changed_record_epoch(base, method, path, body=None):
+            reply = original_request(base, method, path, body)
+            if method == "GET" and path.startswith("/events/id/"):
+                return {**reply, "process_epoch": "0" * 32}
+            return reply
+
+        with patch.object(self.left, "_request", side_effect=changed_record_epoch):
+            report = self.left.sync()
+        self.assertEqual(report["undelivered"][self.left.peers[0]],
+                         [{"event": result["event"], "reason": "unverified_ack"}])
+
     def test_sync_reports_missing_remote_event_record_as_undelivered(self):
         self.left.peers = []
         result = self.left.action("alice", "transfer", {"recipient": "bob", "amount": 1})

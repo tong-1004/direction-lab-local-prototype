@@ -475,7 +475,7 @@ class Node:
                         if (not isinstance(acknowledgement, dict) or acknowledgement.get("accepted") is not True
                                 or acknowledgement.get("event") != expected_id):
                             undelivered.append({"event": expected_id, "reason": "invalid_ack"})
-                        elif not self._remote_has_event(base, decode_event(event)):
+                        elif not self._remote_has_event(base, decode_event(event), remote.get("process_epoch")):
                             undelivered.append({"event": expected_id, "reason": "unverified_ack"})
                     except HTTPError as error:
                         undelivered.append({"event": decode_event(event).id, "http_status": error.code})
