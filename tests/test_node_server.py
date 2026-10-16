@@ -897,6 +897,15 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('此頁開啟期間節點已重啟；請重新載入並核對事件與配置', script)
         self.assertIn('|| Boolean(configError)', script)
 
+    def test_browser_pins_node_only_after_consistent_initial_read(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        refresh = script.split('async function refresh()', 1)[1].split('async function lookupById(', 1)[0]
+        consistency = refresh.index('state.events !== eventData.event_count')
+        self.assertGreater(refresh.index('if (observedNetwork === null) observedNetwork = network;'), consistency)
+        self.assertGreater(refresh.index('if (observedProcessEpoch === null) observedProcessEpoch = state.process_epoch;'), consistency)
+
     def test_lookup_rejects_restarted_local_node(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:

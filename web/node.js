@@ -175,12 +175,10 @@ async function refresh() {
     } catch (error) { configError = error; }
   }
   const network = `${state.identity_mode}:${state.signature_domain}`;
-  if (observedNetwork === null && !configError) observedNetwork = network;
-  else if (observedNetwork !== null && observedNetwork !== network)
+  if (observedNetwork !== null && observedNetwork !== network)
     configError = new Error("此頁開啟期間節點測試網路已變更；請重新載入並核對配置");
   if (typeof state.process_epoch !== "string" || !/^[0-9a-f]{32}$/.test(state.process_epoch))
     configError = new Error("節點進程識別格式無效；請重新核對節點");
-  else if (observedProcessEpoch === null && !configError) observedProcessEpoch = state.process_epoch;
   else if (observedProcessEpoch !== null && observedProcessEpoch !== state.process_epoch)
     configError = new Error("此頁開啟期間節點已重啟；請重新載入並核對事件與配置");
   if (sequence !== refreshSequence) return;
@@ -194,6 +192,10 @@ async function refresh() {
   if (state.events !== eventData.event_count || state.process_epoch !== eventData.process_epoch) {
     pauseNodeActions("節點在讀取期間重啟或事件變動，等待重新整理");
     return;
+  }
+  if (!configError) {
+    if (observedNetwork === null) observedNetwork = network;
+    if (observedProcessEpoch === null) observedProcessEpoch = state.process_epoch;
   }
   if (configError) {
     lookupSequence++;
