@@ -827,7 +827,7 @@ def make_server(node: Node, port: int) -> ThreadingHTTPServer:
                 body = self.rfile.read(length)
                 if len(body) != length:
                     raise ValueError("Incomplete request body")
-                request = json.loads(body, object_pairs_hook=_unique_json_object,
+                request = json.loads(body.decode("utf-8"), object_pairs_hook=_unique_json_object,
                                      parse_constant=_reject_json_constant)
                 if self.path == "/sync":
                     if type(request) is not dict or request:
