@@ -462,6 +462,10 @@ async function lookupById(eventId) {
       result.textContent = "此頁開啟期間節點測試網路已變更；先前與目前的事件核對不可混用，請重新載入並核對配置。";
       return;
     }
+    if (state.process_epoch !== observedProcessEpoch) {
+      result.textContent = "此頁開啟期間節點已重啟；先前與目前的事件核對不可混用，請重新載入並核對事件。";
+      return;
+    }
     if (record.id !== eventId || calculatedId !== eventId || record.signature_valid !== true ||
         !genesisMatches || !browserValid) {
       result.textContent = "節點回覆與查詢 ID 或簽章驗證不符；請勿視為已核對。";

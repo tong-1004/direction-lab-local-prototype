@@ -872,6 +872,14 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('此頁開啟期間節點已重啟；請重新載入並核對事件與配置', script)
         self.assertIn('|| Boolean(configError)', script)
 
+    def test_lookup_rejects_restarted_local_node(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        lookup = script.split('async function lookupById(eventId)', 1)[1].split('$("lookup-form")', 1)[0]
+        self.assertIn('state.process_epoch !== observedProcessEpoch', lookup)
+        self.assertIn('先前與目前的事件核對不可混用', lookup)
+
     def test_peer_difference_ids_are_inspectable_in_browser(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/", timeout=2) as response:
