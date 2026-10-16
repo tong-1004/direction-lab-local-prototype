@@ -952,6 +952,15 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('if (!nodeOnline || !nodeConfigValid || syncPending) return;', script)
         self.assertIn('peerCount === 0 || Boolean(configError)', script)
 
+    def test_browser_submit_rechecks_process_before_and_after_write(self):
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        submit = script.split('async function submit(action)', 1)[1].split('$("transfer-form").addEventListener', 1)[0]
+        self.assertIn('if (!nodeConfigValid)', submit)
+        self.assertIn('if (state.process_epoch !== observedProcessEpoch)', submit)
+        self.assertIn('record.process_epoch !== state.process_epoch', submit)
+
     def test_peer_difference_ids_are_inspectable_in_browser(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/", timeout=2) as response:

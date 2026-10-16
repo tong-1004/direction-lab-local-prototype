@@ -556,6 +556,10 @@ async function submit(action) {
     notice("節點未連線，請等待狀態恢復後再操作。");
     return false;
   }
+  if (!nodeConfigValid) {
+    notice("節點配置或進程已變更；請重新載入並核對後再建立測試事件。");
+    return false;
+  }
   if (submissionPending) {
     notice("上一筆事件尚在處理，請稍候。");
     return false;
@@ -570,6 +574,8 @@ async function submit(action) {
     const state = await request("/status");
     if (observedNetwork !== null && observedNetwork !== `${state.identity_mode}:${state.signature_domain}`)
       throw new Error("此頁開啟期間節點測試網路已變更；請重新載入並核對配置。");
+    if (state.process_epoch !== observedProcessEpoch)
+      throw new Error("此頁開啟期間節點已重啟；未送出事件，請重新載入並核對配置。");
     let result;
     if (state.identity_mode === "public-key") {
       if (await DirectionIdentity.genesisDomain(state.network_id, state.genesis) !== state.signature_domain)
@@ -601,7 +607,7 @@ async function submit(action) {
       const browserValid = state.identity_mode !== "public-key" ||
         (Object.hasOwn(state.genesis, record.event?.author) &&
          await DirectionIdentity.verifyBrowserEvent(record.event, state.signature_domain));
-      if (record.id !== result.event || calculatedId !== result.event ||
+      if (record.process_epoch !== state.process_epoch || record.id !== result.event || calculatedId !== result.event ||
           record.signature_valid !== true || !browserValid)
         throw new Error("無法在本節點核對剛送出的簽章事件");
     }
