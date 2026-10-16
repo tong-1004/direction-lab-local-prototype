@@ -801,6 +801,8 @@ def make_server(node: Node, port: int) -> ThreadingHTTPServer:
             if self.path not in {"/sync", "/events", "/actions"}:
                 return self.respond(404, {"error": "not_found"})
             try:
+                if self.headers.get_all("Transfer-Encoding", []):
+                    raise ValueError("Chunked request bodies are unsupported")
                 lengths = self.headers.get_all("Content-Length", [])
                 if len(lengths) != 1:
                     raise ValueError("Expected one request length")
