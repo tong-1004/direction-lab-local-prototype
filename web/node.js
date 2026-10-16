@@ -493,6 +493,10 @@ async function lookupById(eventId) {
         result.textContent = "節點在查詢相鄰節點期間已重啟；請重新載入並重新核對事件。";
         return;
       }
+      if (comparison.local_changed || comparison.local_event_count !== state.events) {
+        result.textContent = "本節點事件在核對期間已變動；請重新查詢，勿沿用先前的事件與衝突狀態。";
+        return;
+      }
       if (comparison.event !== eventId || typeof comparison.peers !== "object"
           || comparison.peers === null || Array.isArray(comparison.peers)) {
         throw new Error("相鄰節點核對回覆與事件 ID 不符");
@@ -515,7 +519,6 @@ async function lookupById(eventId) {
       peerNote = states.length
         ? `相鄰節點：${observed} 個回報同一簽章事件、${missing} 個目前不可見、${uncertain} 個無法核對。${details}。不可見不等於事件不存在。`
         : "尚未設定相鄰節點，無法交叉核對。";
-      if (comparison.local_changed) peerNote += "本節點在查詢期間新增事件，請重新核對。";
     } catch (error) {
       if (sequence !== lookupSequence) return;
       peerNote = `相鄰節點核對失敗：${error.message}。`;
