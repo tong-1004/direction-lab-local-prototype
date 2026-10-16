@@ -756,6 +756,7 @@ def make_server(node: Node, port: int) -> ThreadingHTTPServer:
                         response = (404, {"error": "event_not_found"})
                     else:
                         response = (200, {"id": event.id, "event": event_dict(event),
+                                          "process_epoch": node.process_epoch,
                                           "signature_valid": node.peer.signer.verify(event)})
                 return self.respond(*response)
             if len(parts) == 5 and parts[1:3] == ["events", "id"] and parts[4] == "peers":

@@ -877,7 +877,7 @@ class NodeServerTest(unittest.TestCase):
         with urlopen(base + "/node.js", timeout=2) as response:
             script = response.read().decode("utf-8")
         lookup = script.split('async function lookupById(eventId)', 1)[1].split('$("lookup-form")', 1)[0]
-        self.assertIn('state.process_epoch !== observedProcessEpoch', lookup)
+        self.assertIn('state.process_epoch !== observedProcessEpoch || record.process_epoch !== state.process_epoch', lookup)
         self.assertIn('先前與目前的事件核對不可混用', lookup)
 
     def test_peer_difference_ids_are_inspectable_in_browser(self):
@@ -1344,6 +1344,7 @@ class NodeServerTest(unittest.TestCase):
         record = self.left._request(base, "GET", "/events/id/" + result["event"])
         self.assertEqual(record["id"], result["event"])
         self.assertTrue(record["signature_valid"])
+        self.assertEqual(record["process_epoch"], self.left.process_epoch)
         self.assertEqual(record["event"]["kind"], "transfer")
         self.assertNotIn("id", record["event"])
         self.assertEqual(self.left.peer.status()["events"], 1)

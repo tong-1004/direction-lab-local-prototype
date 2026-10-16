@@ -462,7 +462,7 @@ async function lookupById(eventId) {
       result.textContent = "此頁開啟期間節點測試網路已變更；先前與目前的事件核對不可混用，請重新載入並核對配置。";
       return;
     }
-    if (state.process_epoch !== observedProcessEpoch) {
+    if (state.process_epoch !== observedProcessEpoch || record.process_epoch !== state.process_epoch) {
       result.textContent = "此頁開啟期間節點已重啟；先前與目前的事件核對不可混用，請重新載入並核對事件。";
       return;
     }
