@@ -783,6 +783,7 @@ def make_server(node: Node, port: int) -> ThreadingHTTPServer:
                         response = (404, {"error": "unknown_author"})
                     else:
                         response = (200, {"author": author,
+                                          "process_epoch": node.process_epoch,
                                           "next_sequence": node.peer.next_sequence[author],
                                           "previous": node.peer.author_head[author],
                                           "halted": author in node.peer.halted_authors})

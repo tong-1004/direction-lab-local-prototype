@@ -960,6 +960,7 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('if (!nodeConfigValid)', submit)
         self.assertIn('if (state.process_epoch !== observedProcessEpoch)', submit)
         self.assertIn('record.process_epoch !== state.process_epoch', submit)
+        self.assertIn('head.process_epoch !== state.process_epoch', submit)
 
     def test_peer_difference_ids_are_inspectable_in_browser(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
@@ -1441,7 +1442,8 @@ class NodeServerTest(unittest.TestCase):
     def test_author_head_exposes_only_current_sequence_and_predecessor(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         head = self.left._request(base, "GET", "/authors/alice/head")
-        self.assertEqual(head, {"author": "alice", "next_sequence": 1,
+        self.assertEqual(head, {"author": "alice", "process_epoch": self.left.process_epoch,
+                                "next_sequence": 1,
                                 "previous": "GENESIS", "halted": False})
         result = self.left.action("alice", "transfer", {"recipient": "bob", "amount": 2})
         self.assertTrue(result["accepted"])

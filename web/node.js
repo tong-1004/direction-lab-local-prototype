@@ -583,6 +583,8 @@ async function submit(action) {
       if (!Object.hasOwn(state.balances, action.author)) throw new Error("此身分不在測試網路中。");
       if (state.halted_authors.includes(action.author)) throw new Error("此身分有衝突，已暫停新事件。");
       const head = await request(`/authors/${encodeURIComponent(action.author)}/head`);
+      if (head.process_epoch !== state.process_epoch)
+        throw new Error("節點在讀取身分事件序號期間已重啟；未送出事件，請重新載入並核對配置。");
       if (head.halted) throw new Error("此身分有衝突，已暫停新事件。");
       const signed = await DirectionIdentity.signBrowserEvent(
         action.author, state.signature_domain, head, action.kind, action.payload);
