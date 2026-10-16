@@ -91,6 +91,7 @@ class NodeServerTest(unittest.TestCase):
         with urlopen(base + f"/events/id/{event.id}/peers", timeout=2) as response:
             missing = json.load(response)
         self.assertEqual(missing["peers"][self.left.peers[0]], "not_visible")
+        self.assertEqual(missing["process_epoch"], self.left.process_epoch)
         self.assertFalse(missing["finality_proven"])
         self.assertTrue(self.right.accept(event)["accepted"])
         with urlopen(base + f"/events/id/{event.id}/peers", timeout=2) as response:
@@ -913,6 +914,8 @@ class NodeServerTest(unittest.TestCase):
         lookup = script.split('async function lookupById(eventId)', 1)[1].split('$("lookup-form")', 1)[0]
         self.assertIn('state.process_epoch !== observedProcessEpoch || record.process_epoch !== state.process_epoch', lookup)
         self.assertIn('先前與目前的事件核對不可混用', lookup)
+        self.assertIn('comparison.process_epoch !== state.process_epoch', lookup)
+        self.assertIn('節點在查詢相鄰節點期間已重啟', lookup)
 
     def test_config_change_invalidates_visible_and_inflight_lookup(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"

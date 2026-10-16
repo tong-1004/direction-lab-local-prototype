@@ -489,6 +489,10 @@ async function lookupById(eventId) {
     try {
       const comparison = await request(`/events/id/${encodeURIComponent(eventId)}/peers`);
       if (sequence !== lookupSequence) return;
+      if (comparison.process_epoch !== state.process_epoch) {
+        result.textContent = "節點在查詢相鄰節點期間已重啟；請重新載入並重新核對事件。";
+        return;
+      }
       if (comparison.event !== eventId || typeof comparison.peers !== "object"
           || comparison.peers === null || Array.isArray(comparison.peers)) {
         throw new Error("相鄰節點核對回覆與事件 ID 不符");

@@ -621,6 +621,7 @@ class Node:
         with self.lock:
             local_changed = set(self.peer.events) != local_ids
         return {"event": event_id, "peers": results, "local_changed": local_changed,
+                "process_epoch": self.process_epoch,
                 "finality_proven": False}
 
 
