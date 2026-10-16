@@ -503,6 +503,8 @@ class Node:
         with self.lock:
             domain = public_genesis_domain(self.public_genesis) if self.public_genesis else "demo"
             local_ids = set(self.peer.events)
+            report["local_event_count"] = len(local_ids)
+            report["process_epoch"] = self.process_epoch
             local_balances = dict(self.peer.balances)
             local_proposals = self.peer.status()["proposals"]
             genesis = dict(self.peer.genesis)

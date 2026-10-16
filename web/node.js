@@ -5,6 +5,7 @@ const identityLabel = id => /^[0-9a-f]{64}$/.test(id) ? `${id.slice(0, 12)}…${
 let nodeOnline = false;
 let syncPending = false;
 let comparePending = false;
+let comparedNodeVersion = null;
 let exportPending = false;
 let renderedConflictsKey = null;
 let lookupSequence = 0;
@@ -35,6 +36,7 @@ function pauseNodeActions(reason = "節點無法連線") {
   $("lookup-result").textContent = "節點狀態已失效；先前的單筆事件核對不可沿用，請重新連線後查詢。";
   $("compare-details").hidden = true;
   $("compare-details").replaceChildren();
+  comparedNodeVersion = null;
   renderedProposalsKey = null;
   const lastRead = lastRefreshAt ? `上次成功讀取：${lastRefreshAt}。` : "尚未成功讀取節點。";
   $("connection-state").textContent = `${reason}；${lastRead}畫面資料可能過期，交易與投票已暫停。`;
@@ -186,6 +188,13 @@ async function refresh() {
   if (state.events !== eventData.event_count || state.process_epoch !== eventData.process_epoch) {
     pauseNodeActions("節點在讀取期間重啟或事件變動，等待重新整理");
     return;
+  }
+  if (comparedNodeVersion !== null &&
+      comparedNodeVersion !== `${state.events}:${state.process_epoch}`) {
+    $("compare-details").hidden = true;
+    $("compare-details").replaceChildren();
+    comparedNodeVersion = null;
+    notice("本節點事件或進程已變動；先前差異明細已清除，請重新檢查。");
   }
   $("peer-name").textContent = state.peer;
   if (state.peer === "left" || state.peer === "right") {
@@ -718,6 +727,7 @@ $("compare-peers").addEventListener("click", async () => {
   $("compare-peers").disabled = true;
   $("compare-details").hidden = true;
   $("compare-details").replaceChildren();
+  comparedNodeVersion = null;
   try {
     const report = await request("/compare");
     if (!nodeOnline) throw new Error("節點狀態已失效，請重新連線後檢查");
@@ -734,7 +744,12 @@ $("compare-peers").addEventListener("click", async () => {
     if (onlyRemote) problems.push(`${onlyRemote} 筆只在相鄰節點`);
     if (report.balance_mismatch?.length) problems.push(`${report.balance_mismatch.length} 個相鄰節點的暫定點數不同`);
     if (report.proposal_mismatch?.length) problems.push(`${report.proposal_mismatch.length} 個相鄰節點的提案或票數不同`);
-    renderPeerDifferences(report.differences);
+    if (!report.local_changed && Number.isInteger(report.local_event_count)
+        && /^[0-9a-f]{32}$/.test(report.process_epoch)) {
+      comparedNodeVersion = `${report.local_event_count}:${report.process_epoch}`;
+      renderPeerDifferences(report.differences);
+      if ($("compare-details").hidden) comparedNodeVersion = null;
+    }
     notice(problems.length ? `節點比對發現問題：${problems.join("、")}。可同步缺少的事件；事件衝突不能靠同步裁決。`
       : "已連線的相鄰節點目前事件集合相同；這不是全網共識或最終結算證明。");
   } catch (error) { notice(`節點差異檢查失敗：${error.message}`); }

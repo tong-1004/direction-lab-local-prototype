@@ -834,6 +834,17 @@ class NodeServerTest(unittest.TestCase):
         self.assertIn('renderPeerDifferences(report.differences);', script)
         self.assertIn('$("compare-details").hidden = true;', script)
 
+    def test_peer_difference_details_expire_with_local_node_version(self):
+        report = self.left.compare_peers()
+        self.assertEqual(report["local_event_count"], len(self.left.peer.events))
+        self.assertEqual(report["process_epoch"], self.left.process_epoch)
+        base = f"http://127.0.0.1:{self.servers[0].server_port}"
+        with urlopen(base + "/node.js", timeout=2) as response:
+            script = response.read().decode("utf-8")
+        self.assertIn('comparedNodeVersion !== `${state.events}:${state.process_epoch}`', script)
+        self.assertIn('本節點事件或進程已變動；先前差異明細已清除', script)
+        self.assertIn('if (!report.local_changed && Number.isInteger(report.local_event_count)', script)
+
     def test_identity_selects_keep_focus_when_poll_values_are_unchanged(self):
         base = f"http://127.0.0.1:{self.servers[0].server_port}"
         with urlopen(base + "/node.js", timeout=2) as response:
